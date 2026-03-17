@@ -50,3 +50,19 @@ def hamiltonian(s: np.ndarray, J: np.ndarray, h: np.ndarray) -> float:
     field_energy = np.dot(h, s)
 
     return -interaction_energy - field_energy
+
+
+def hamiltonian_vectorized(s: np.ndarray, J: np.ndarray, h: np.ndarray) -> float:
+    """
+    Vectorized equivalent of `hamiltonian` using NumPy for efficiency.
+    Extracts the upper triangle of J to enforce the i < j constraint.
+    """
+    s = np.asarray(s, dtype=float)
+    J = np.asarray(J, dtype=float)
+    h = np.asarray(h, dtype=float)
+
+    i_idx, j_idx = np.triu_indices(len(s), k=1)
+    interaction_energy = np.sum(J[i_idx, j_idx] * s[i_idx] * s[j_idx])
+    field_energy = np.dot(h, s)
+
+    return -interaction_energy - field_energy

@@ -66,3 +66,28 @@ def hamiltonian_vectorized(s: np.ndarray, J: np.ndarray, h: np.ndarray) -> float
     field_energy = np.dot(h, s)
 
     return -interaction_energy - field_energy
+
+
+if __name__ == "__main__":
+    N = 4
+    s = np.array([1, 1, 1, 1])
+
+    J = np.zeros((N, N))
+    for i in range(N - 1):
+        J[i, i + 1] = 1.0
+
+    h = np.full(N, 0.5)
+
+    energy = hamiltonian_vectorized(s, J, h)
+
+    print("Ising Model Hamiltonian Demo")
+    print("=" * 40)
+    print(f"Spins          : {s.tolist()}")
+    print(f"Coupling J     :\n{J}")
+    print(f"External field : {h.tolist()}")
+    print(f"H(s)           : {energy:.4f}")
+
+    s_down = np.array([-1, -1, -1, -1])
+    print()
+    print(f"H(all +1) = {hamiltonian_vectorized(s, J, h):.4f}")
+    print(f"H(all -1) = {hamiltonian_vectorized(s_down, J, h):.4f}")

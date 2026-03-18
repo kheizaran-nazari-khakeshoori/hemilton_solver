@@ -63,3 +63,82 @@ def _mutate_swap(chromosome: np.ndarray, rng: np.random.Generator) -> None:
 	if j >= i:
 		j += 1
 	chromosome[i], chromosome[j] = chromosome[j], chromosome[i]
+
+
+def genetic_algorithm(
+	base_spins: np.ndarray,
+	J: np.ndarray,
+	h: np.ndarray,
+	population_size: int = 80,
+	generations: int = 300,
+	elite_fraction: float = 0.1,
+	mutation_rate: float = 0.2,
+	tournament_k: int = 3,
+	seed: Optional[int] = None,
+) -> GAResult:
+	"""Minimize Ising energy by evolving permutations of a base spin vector."""
+	base_spins = np.asarray(base_spins, dtype=float)
+	J = np.asarray(J, dtype=float)
+	h = np.asarray(h, dtype=float)
+
+	n = len(base_spins)
+	if n < 2:
+		raise ValueError("Need at least 2 spins")
+	if J.shape != (n, n):
+		raise ValueError(f"J must have shape ({n}, {n}), got {J.shape}")
+	if h.shape != (n,):
+		raise ValueError(f"h must have shape ({n},), got {h.shape}")
+	if population_size < 4:
+		raise ValueError("population_size must be >= 4")
+	if generations < 1:
+		raise ValueError("generations must be >= 1")
+	if not (0 <= mutation_rate <= 1):
+		raise ValueError("mutation_rate must be in [0, 1]")
+	if not (0 < elite_fraction < 1):
+		raise ValueError("elite_fraction must be in (0, 1)")
+
+	rng = np.random.default_rng(seed)
+	elite_count = max(1, int(population_size * elite_fraction))
+
+	population = np.array([rng.permutation(n) for _ in range(population_size)], dtype=int)
+	fitness = np.array([
+		_energy_of_permutation(p, base_spins, J, h) for p in population
+	])
+
+	history = np.empty(generations, dtype=float)
+
+	for g in range(generations):
+		order = np.argsort(fitness)
+		population = population[order]
+		fitness = fitness[order]
+		history[g] = fitness[0]
+
+		elites = population[:elite_count].copy()
+		new_population = [e.copy() for e in elites]
+		while len(new_population) < population_size:
+			dad_idx = _tournament_select(fitness, tournament_k, rng)
+			mom_idx = _tournament_select(fitness, tournament_k, rng)
+			dad = population[dad_idx]
+			mom = population[mom_idx]
+
+			child = _crossover_unique(dad, mom, rng)
+			if rng.random() < mutation_rate:
+				_mutate_swap(child, rng)
+			new_population.append(child)
+
+		population = np.array(new_population, dtype=int)
+		fitness = np.array([
+			_energy_of_permutation(p, base_spins, J, h) for p in population
+		])
+
+	best_idx = int(np.argmin(fitness))
+	best_perm = population[best_idx].copy()
+	best_spins = base_spins[best_perm]
+	best_energy = float(fitness[best_idx])
+
+	return GAResult(
+		best_permutation=best_perm,
+		best_spins=best_spins,
+		best_energy=best_energy,
+		history_best_energy=history,
+	)

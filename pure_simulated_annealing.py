@@ -135,3 +135,31 @@ def pure_simulated_annealing(
 		attempted_moves=steps,
 		energy_trace=trace,
 	)
+
+
+if __name__ == "__main__":
+	N = 12
+	rng = np.random.default_rng(7)
+	s0 = rng.choice([-1.0, 1.0], size=N)
+
+	J = np.zeros((N, N), dtype=float)
+	for idx in range(N - 1):
+		J[idx, idx + 1] = 1.0
+
+	h = np.zeros(N, dtype=float)
+
+	result = pure_simulated_annealing(
+		s0=s0,
+		J=J,
+		h=h,
+		initial_temp=3.0,
+		cooling_rate=0.999,
+		steps=20_000,
+		seed=42,
+	)
+
+	print("Pure Simulated Annealing (random-pair proposals)")
+	print(f"Initial energy: {hamiltonian_vectorized(s0, J, h):.6f}")
+	print(f"Final energy  : {result.final_energy:.6f}")
+	print(f"Best energy   : {result.best_energy:.6f}")
+	print(f"Accepted moves: {result.accepted_moves}/{result.attempted_moves}")

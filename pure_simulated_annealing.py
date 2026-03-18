@@ -59,3 +59,79 @@ class AnnealResult:
 	accepted_moves: int
 	attempted_moves: int
 	energy_trace: np.ndarray
+
+
+def pure_simulated_annealing(
+	s0: np.ndarray,
+	J: np.ndarray,
+	h: np.ndarray,
+	initial_temp: float = 5.0,
+	cooling_rate: float = 0.995,
+	steps: int = 10_000,
+	seed: Optional[int] = None,
+) -> AnnealResult:
+	"""Run pair-swap simulated annealing with one random proposal per step."""
+	if steps <= 0:
+		raise ValueError("steps must be > 0")
+	if initial_temp <= 0:
+		raise ValueError("initial_temp must be > 0")
+	if not (0 < cooling_rate <= 1):
+		raise ValueError("cooling_rate must be in (0, 1]")
+
+	s = np.asarray(s0, dtype=float).copy()
+	J = np.asarray(J, dtype=float)
+	h = np.asarray(h, dtype=float)
+
+	n = len(s)
+	if n < 2:
+		raise ValueError("Need at least 2 spins for pair swaps")
+	if J.shape != (n, n):
+		raise ValueError(f"J must have shape ({n}, {n}), got {J.shape}")
+	if h.shape != (n,):
+		raise ValueError(f"h must have shape ({n},), got {h.shape}")
+
+	rng = np.random.default_rng(seed)
+
+	current_energy = float(hamiltonian_vectorized(s, J, h))
+	best_energy = current_energy
+	best_spins = s.copy()
+
+	accepted = 0
+	temp = float(initial_temp)
+	trace = np.empty(steps, dtype=float)
+
+	for t in range(steps):
+		i = int(rng.integers(0, n))
+		j = int(rng.integers(0, n - 1))
+		if j >= i:
+			j += 1
+
+		delta_h = delta_h_for_swap(s, J, h, i, j)
+
+		if delta_h <= 0:
+			accept = True
+		else:
+			accept_prob = math.exp(-delta_h / max(temp, 1e-12))
+			accept = bool(rng.random() < accept_prob)
+
+		if accept:
+			s[i], s[j] = s[j], s[i]
+			current_energy += delta_h
+			accepted += 1
+
+			if current_energy < best_energy:
+				best_energy = current_energy
+				best_spins = s.copy()
+
+		trace[t] = current_energy
+		temp *= cooling_rate
+
+	return AnnealResult(
+		best_spins=best_spins,
+		best_energy=float(best_energy),
+		final_spins=s.copy(),
+		final_energy=float(current_energy),
+		accepted_moves=accepted,
+		attempted_moves=steps,
+		energy_trace=trace,
+	)

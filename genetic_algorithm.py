@@ -142,3 +142,35 @@ def genetic_algorithm(
 		best_energy=best_energy,
 		history_best_energy=history,
 	)
+
+
+if __name__ == "__main__":
+	N = 20
+	rng = np.random.default_rng(12)
+
+	base_spins = np.array([1.0] * (N // 2) + [-1.0] * (N - N // 2))
+	rng.shuffle(base_spins)
+
+	J = np.zeros((N, N), dtype=float)
+	for i in range(N - 1):
+		J[i, i + 1] = 1.0
+
+	h = rng.normal(loc=0.0, scale=0.15, size=N)
+
+	initial_energy = hamiltonian_vectorized(base_spins, J, h)
+	result = genetic_algorithm(
+		base_spins=base_spins,
+		J=J,
+		h=h,
+		population_size=100,
+		generations=350,
+		elite_fraction=0.12,
+		mutation_rate=0.25,
+		tournament_k=4,
+		seed=77,
+	)
+
+	print("Genetic Algorithm (Evolutionary Way)")
+	print(f"Initial energy : {initial_energy:.6f}")
+	print(f"Best energy    : {result.best_energy:.6f}")
+	print(f"Best permutation head: {result.best_permutation[:10].tolist()}")

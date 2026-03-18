@@ -48,3 +48,14 @@ def delta_h_for_swap(s: np.ndarray, J: np.ndarray, h: np.ndarray, i: int, j: int
 		delta += float(new_pair - old_pair)
 
 	return delta
+
+
+@dataclass
+class AnnealResult:
+	best_spins: np.ndarray
+	best_energy: float
+	final_spins: np.ndarray
+	final_energy: float
+	accepted_moves: int
+	attempted_moves: int
+	energy_trace: np.ndarray

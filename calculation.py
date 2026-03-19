@@ -117,3 +117,108 @@ def _compute_metrics_dict(
 		"standard_deviation": std_energy,
 		"residual_energy": residual,
 	}
+
+
+def run_all_calculations_bundle(spins: np.ndarray, J: np.ndarray, h: np.ndarray) -> dict[str, dict]:
+	spins, J, h = _validate_inputs(spins, J, h)
+	n = len(spins)
+
+	trials = 5
+	sa_steps = max(1_500, min(8_000, n * 450))
+	ga_population = max(24, min(100, 4 * n))
+	ga_generations = max(60, min(220, 12 * n))
+	tabu_iterations = max(80, min(450, 18 * n))
+	tabu_tenure = max(5, min(20, n // 2))
+
+	header = _format_header(spins, J, h)
+	initial_energy = float(hamiltonian_vectorized(spins, J, h))
+	all_best_candidates: list[float] = [initial_energy]
+
+	t0 = time.perf_counter()
+	for _ in range(trials):
+		_ = float(hamiltonian_vectorized(spins, J, h))
+	h_total = time.perf_counter() - t0
+	h_best_arr = np.full(trials, initial_energy, dtype=float)
+	h_step_arr = np.zeros(trials, dtype=float)
+
+	sa_best = np.empty(trials, dtype=float)
+	sa_step_best = np.empty(trials, dtype=float)
+	t0 = time.perf_counter()
+	for r in range(trials):
+		sa = pure_simulated_annealing(
+			s0=spins,
+			J=J,
+			h=h,
+			initial_temp=3.5,
+			cooling_rate=0.998,
+			steps=sa_steps,
+			seed=42 + r,
+		)
+		sa_best[r] = float(sa.best_energy)
+		sa_step_best[r] = float(_first_best_step(sa.energy_trace))
+	sa_total = time.perf_counter() - t0
+	all_best_candidates.append(float(np.min(sa_best)))
+
+	ga_best = np.empty(trials, dtype=float)
+	ga_step_best = np.empty(trials, dtype=float)
+	t0 = time.perf_counter()
+	for r in range(trials):
+		ga = genetic_algorithm(
+			base_spins=spins,
+			J=J,
+			h=h,
+			population_size=ga_population,
+			generations=ga_generations,
+			elite_fraction=0.12,
+			mutation_rate=0.25,
+			tournament_k=4,
+			seed=77 + r,
+		)
+		ga_best[r] = float(ga.best_energy)
+		ga_step_best[r] = float(_first_best_step(ga.history_best_energy))
+	ga_total = time.perf_counter() - t0
+	all_best_candidates.append(float(np.min(ga_best)))
+
+	ts_best = np.empty(trials, dtype=float)
+	ts_step_best = np.empty(trials, dtype=float)
+	t0 = time.perf_counter()
+	for _ in range(trials):
+		ts = tabu_search(
+			s0=spins,
+			J=J,
+			h=h,
+			iterations=tabu_iterations,
+			tabu_tenure=tabu_tenure,
+			max_no_improve=max(40, tabu_iterations // 3),
+		)
+		ts_best[_] = float(ts.best_energy)
+		ts_step_best[_] = float(_first_best_step(ts.history_best_energy))
+	ts_total = time.perf_counter() - t0
+	all_best_candidates.append(float(np.min(ts_best)))
+
+	reference_best = float(np.min(np.array(all_best_candidates, dtype=float)))
+
+	h_cost = float(trials)
+	sa_cost = float(trials * sa_steps)
+	ga_cost = float(trials * ga_population * (ga_generations + 1))
+	ts_cost = float(trials * tabu_iterations * (n * (n - 1) // 2))
+
+	metrics = {
+		"Hamiltonian Energy": _compute_metrics_dict(1, h_cost, h_total, h_best_arr, h_step_arr, reference_best),
+		"Simulated Annealing": _compute_metrics_dict(sa_steps, sa_cost, sa_total, sa_best, sa_step_best, reference_best),
+		"Genetic Algorithm": _compute_metrics_dict(ga_generations, ga_cost, ga_total, ga_best, ga_step_best, reference_best),
+		"Tabu Search": _compute_metrics_dict(tabu_iterations, ts_cost, ts_total, ts_best, ts_step_best, reference_best),
+	}
+
+	texts = {
+		"Hamiltonian Energy": header + "\n" + _format_metrics_block("Hamiltonian Energy", 1, h_cost, h_total, h_best_arr, h_step_arr, reference_best),
+		"Simulated Annealing": header + "\n" + _format_metrics_block("Pure Simulated Annealing", sa_steps, sa_cost, sa_total, sa_best, sa_step_best, reference_best),
+		"Genetic Algorithm": header + "\n" + _format_metrics_block("Genetic Algorithm", ga_generations, ga_cost, ga_total, ga_best, ga_step_best, reference_best),
+		"Tabu Search": header + "\n" + _format_metrics_block("Tabu Search", tabu_iterations, ts_cost, ts_total, ts_best, ts_step_best, reference_best),
+	}
+
+	return {"texts": texts, "metrics": metrics}
+
+
+def run_all_calculations(spins: np.ndarray, J: np.ndarray, h: np.ndarray) -> Dict[str, str]:
+	return run_all_calculations_bundle(spins, J, h)["texts"]

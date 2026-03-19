@@ -38,3 +38,88 @@ class IsingGUI:
 
         self._build_ui()
         self.root.after(50, self._refresh)
+
+    def _build_ui(self) -> None:
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("TLabelframe", background="#1e293b", foreground="#e2e8f0")
+        style.configure("TLabelframe.Label", background="#1e293b", foreground="#7dd3fc", font=("Segoe UI", 10, "bold"))
+        style.configure("TLabel", background="#1e293b", foreground="#e2e8f0")
+        style.configure("TButton", padding=4)
+        style.configure("TEntry", fieldbackground="#334155", foreground="#f8fafc")
+        style.configure("TSpinbox", fieldbackground="#334155", foreground="#f8fafc")
+
+        top_wrap = ttk.Frame(self.root)
+        top_wrap.pack(fill=tk.X, padx=10, pady=(10, 4))
+
+        top = ttk.LabelFrame(top_wrap, text="Parameters", padding=8)
+        top.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+
+        conn = ttk.LabelFrame(top_wrap, text="Connection of Spins", padding=8)
+        conn.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
+
+        ttk.Label(top, text="Spins  N:").grid(row=0, column=0, sticky=tk.W, padx=4)
+        self._n_var = tk.IntVar(value=self.N)
+        ttk.Spinbox(top, from_=2, to=30, textvariable=self._n_var, width=5, command=self._apply_n).grid(row=0, column=1, padx=4)
+        ttk.Button(top, text="Apply N", command=self._apply_n).grid(row=0, column=2, padx=8)
+
+        ttk.Label(top, text="Coupling  J:").grid(row=1, column=0, sticky=tk.W, padx=4)
+        self._j_var = tk.StringVar(value="1.0")
+        ttk.Entry(top, textvariable=self._j_var, width=8).grid(row=1, column=1, padx=4)
+        ttk.Button(top, text="Custom J matrix…", command=self._open_custom_J).grid(row=1, column=2, padx=8)
+
+        ttk.Label(top, text="Field  h:").grid(row=2, column=0, sticky=tk.W, padx=4)
+        self._h_var = tk.StringVar(value="0.5")
+        ttk.Entry(top, textvariable=self._h_var, width=8).grid(row=2, column=1, padx=4)
+        ttk.Button(top, text="Custom h vector…", command=self._open_custom_h).grid(row=2, column=2, padx=8)
+
+        self._topology_var = tk.StringVar(value="Custom")
+        self._topology_var.trace_add("write", lambda *_: self._on_topology_change())
+        ttk.Label(conn, text="Topology:").grid(row=0, column=0, sticky=tk.W, padx=2)
+        ttk.Radiobutton(conn, text="Custom", value="Custom", variable=self._topology_var).grid(row=0, column=1, sticky=tk.W, padx=2)
+        ttk.Radiobutton(conn, text="None", value="None (disconnected)", variable=self._topology_var).grid(row=0, column=2, sticky=tk.W, padx=2)
+        ttk.Radiobutton(conn, text="Chain", value="Chain (1D)", variable=self._topology_var).grid(row=0, column=3, sticky=tk.W, padx=2)
+        ttk.Radiobutton(conn, text="Full", value="Fully Connected", variable=self._topology_var).grid(row=0, column=4, sticky=tk.W, padx=2)
+
+        ttk.Label(conn, text="sᵢ:").grid(row=1, column=0, sticky=tk.W, padx=(2, 2), pady=(8, 0))
+        self._pair_i_var = tk.IntVar(value=1)
+        self._pair_i_spin = ttk.Spinbox(conn, from_=1, to=30, textvariable=self._pair_i_var, width=5)
+        self._pair_i_spin.grid(row=1, column=1, sticky=tk.W, padx=2, pady=(8, 0))
+        ttk.Label(conn, text="sⱼ:").grid(row=1, column=2, sticky=tk.W, padx=(6, 2), pady=(8, 0))
+        self._pair_j_var = tk.IntVar(value=5)
+        self._pair_j_spin = ttk.Spinbox(conn, from_=1, to=30, textvariable=self._pair_j_var, width=5)
+        self._pair_j_spin.grid(row=1, column=3, sticky=tk.W, padx=2, pady=(8, 0))
+        ttk.Label(conn, text="J:").grid(row=2, column=0, sticky=tk.W, padx=(2, 2), pady=(8, 0))
+        self._pair_j_strength = tk.StringVar(value="1.0")
+        self._pair_j_entry = ttk.Entry(conn, textvariable=self._pair_j_strength, width=8)
+        self._pair_j_entry.grid(row=2, column=1, sticky=tk.W, padx=2, pady=(8, 0))
+        self._connect_btn = ttk.Button(conn, text="Connect", command=self._connect_pair)
+        self._connect_btn.grid(row=2, column=2, sticky=tk.W, padx=4, pady=(8, 0))
+        self._disconnect_btn = ttk.Button(conn, text="Disconnect", command=self._disconnect_pair)
+        self._disconnect_btn.grid(row=2, column=3, sticky=tk.W, padx=4, pady=(8, 0))
+
+        self._manual_controls = [
+            self._pair_i_spin,
+            self._pair_j_spin,
+            self._pair_j_entry,
+            self._connect_btn,
+            self._disconnect_btn,
+        ]
+
+        btn_row = ttk.Frame(top)
+        btn_row.grid(row=4, column=0, columnspan=6, pady=(6, 0))
+        ttk.Button(btn_row, text="All  +1", command=lambda: self._set_all(1)).pack(side=tk.LEFT, padx=3)
+        ttk.Button(btn_row, text="All  −1", command=lambda: self._set_all(-1)).pack(side=tk.LEFT, padx=3)
+        ttk.Button(btn_row, text="Alternate", command=self._set_alternating).pack(side=tk.LEFT, padx=3)
+        ttk.Button(btn_row, text="Random", command=self._set_random).pack(side=tk.LEFT, padx=3)
+        ttk.Button(btn_row, text="Calculations", command=self._open_calculations_window).pack(side=tk.LEFT, padx=8)
+
+        self._update_manual_connection_state()
+
+        cf = ttk.LabelFrame(self.root, text="Spin Configuration  —  click a spin to flip it", padding=4)
+        cf.pack(fill=tk.BOTH, expand=True, padx=10, pady=4)
+
+        self._canvas = tk.Canvas(cf, bg=BG_CANVAS, height=300, highlightthickness=0)
+        self._canvas.pack(fill=tk.BOTH, expand=True)
+        self._canvas.bind("<Button-1>", self._on_canvas_click)
+        self._canvas.bind("<Configure>", lambda _e: self._refresh())

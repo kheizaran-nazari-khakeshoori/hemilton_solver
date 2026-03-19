@@ -25,3 +25,16 @@ class IsingGUI:
 
     RADIUS_MAX = 32
     RADIUS_MIN = 8
+
+    def __init__(self, root: tk.Tk) -> None:
+        self.root = root
+        self.root.title("Ising Model — Hamiltonian Visualiser")
+        self.root.configure(bg="#1e293b")
+
+        self.N = 6
+        self.spins: list[int] = [1] * self.N
+        self._custom_J: np.ndarray | None = None
+        self._custom_h: np.ndarray | None = None
+
+        self._build_ui()
+        self.root.after(50, self._refresh)

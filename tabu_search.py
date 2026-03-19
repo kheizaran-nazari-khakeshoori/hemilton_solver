@@ -120,3 +120,32 @@ def tabu_search(
 		history_best_energy=history,
 		accepted_worse_moves=accepted_worse,
 	)
+
+
+if __name__ == "__main__":
+	N = 18
+	rng = np.random.default_rng(13)
+
+	s0 = rng.choice([-1.0, 1.0], size=N)
+
+	J = np.zeros((N, N), dtype=float)
+	for i in range(N - 1):
+		J[i, i + 1] = 1.0
+
+	h = rng.normal(0.0, 0.10, size=N)
+
+	initial_energy = float(hamiltonian_vectorized(s0, J, h))
+	result = tabu_search(
+		s0=s0,
+		J=J,
+		h=h,
+		iterations=500,
+		tabu_tenure=10,
+		max_no_improve=120,
+	)
+
+	print("Tabu Search (Memory Way)")
+	print(f"Initial energy      : {initial_energy:.6f}")
+	print(f"Final energy        : {result.final_energy:.6f}")
+	print(f"Best energy         : {result.best_energy:.6f}")
+	print(f"Accepted worse moves: {result.accepted_worse_moves}")

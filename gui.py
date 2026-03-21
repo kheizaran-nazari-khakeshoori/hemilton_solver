@@ -252,3 +252,29 @@ class IsingGUI:
                 messagebox.showerror("Invalid input", str(exc), parent=dlg)
 
         ttk.Button(dlg, text="Apply", command=_apply).pack(pady=6)
+
+    def _open_custom_h(self) -> None:
+        dlg = tk.Toplevel(self.root)
+        dlg.title("Custom Field Vector h")
+        dlg.configure(bg="#1e293b")
+        dlg.resizable(False, False)
+
+        ttk.Label(dlg, text=f"Enter {self.N} space-separated values for h:", padding=8).pack()
+
+        default = " ".join(str(v) for v in self._build_h())
+        entry = ttk.Entry(dlg, width=40, font=("Courier New", 10))
+        entry.insert(0, default)
+        entry.pack(padx=10, pady=4)
+
+        def _apply() -> None:
+            try:
+                vec = np.array([float(v) for v in entry.get().split()])
+                if vec.shape != (self.N,):
+                    raise ValueError(f"Expected {self.N} values, got {len(vec)}")
+                self._custom_h = vec
+                dlg.destroy()
+                self._refresh()
+            except Exception as exc:
+                messagebox.showerror("Invalid input", str(exc), parent=dlg)
+
+        ttk.Button(dlg, text="Apply", command=_apply).pack(pady=6)

@@ -135,3 +135,17 @@ class IsingGUI:
     def _set_random(self) -> None:
         self.spins = list(np.random.choice([1, -1], size=self.N))
         self._refresh()
+
+    def _apply_n(self) -> None:
+        n = int(self._n_var.get())
+        if n < 2:
+            messagebox.showerror("Invalid N", "N must be at least 2.")
+            return
+        if n > self.N:
+            self.spins += [1] * (n - self.N)
+        else:
+            self.spins = self.spins[:n]
+        self.N = n
+        self._custom_J = None
+        self._custom_h = None
+        self._refresh()

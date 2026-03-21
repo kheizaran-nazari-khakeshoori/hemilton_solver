@@ -123,3 +123,7 @@ class IsingGUI:
         self._canvas.pack(fill=tk.BOTH, expand=True)
         self._canvas.bind("<Button-1>", self._on_canvas_click)
         self._canvas.bind("<Configure>", lambda _e: self._refresh())
+
+    def _set_all(self, val: int) -> None:
+        self.spins = [val] * self.N
+        self._refresh()

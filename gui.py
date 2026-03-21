@@ -161,3 +161,29 @@ class IsingGUI:
                 widget.state(["!disabled"])
             else:
                 widget.state(["disabled"])
+
+    def _connect_pair(self) -> None:
+        if self._topology_var.get() != "Custom":
+            messagebox.showinfo("Manual edit disabled", "Switch topology to 'Custom' to edit pair connections manually.")
+            return
+        try:
+            i = int(self._pair_i_var.get()) - 1
+            j = int(self._pair_j_var.get()) - 1
+            jval = float(self._pair_j_strength.get())
+        except ValueError as exc:
+            messagebox.showerror("Invalid input", str(exc))
+            return
+
+        if not (0 <= i < self.N and 0 <= j < self.N):
+            messagebox.showerror("Out of range", f"Spin numbers must be between 1 and {self.N}.")
+            return
+        if i == j:
+            messagebox.showerror("Invalid pair", "Please choose two different spins.")
+            return
+
+        if self._custom_J is None:
+            self._custom_J = self._build_J().copy()
+
+        lo, hi = (i, j) if i < j else (j, i)
+        self._custom_J[lo, hi] = jval
+        self._refresh()

@@ -149,3 +149,7 @@ class IsingGUI:
         self._custom_J = None
         self._custom_h = None
         self._refresh()
+
+    def _on_topology_change(self) -> None:
+        self._update_manual_connection_state()
+        self._refresh()

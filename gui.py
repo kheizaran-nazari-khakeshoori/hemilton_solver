@@ -209,3 +209,46 @@ class IsingGUI:
         lo, hi = (i, j) if i < j else (j, i)
         self._custom_J[lo, hi] = 0.0
         self._refresh()
+
+    def _open_custom_J(self) -> None:
+        dlg = tk.Toplevel(self.root)
+        dlg.title("Custom Coupling Matrix J  (upper triangle, i < j)")
+        dlg.configure(bg="#1e293b")
+        dlg.resizable(False, False)
+
+        instruction = (
+            f"Enter the {self.N}×{self.N} coupling matrix J.\n"
+            "Each row is space-separated. Only the upper triangle (i<j) is used.\n"
+            "Example for N=3:\n"
+            "  0  1.0  0.5\n"
+            "  0  0    2.0\n"
+            "  0  0    0"
+        )
+        ttk.Label(dlg, text=instruction, font=("Courier New", 9), padding=8).pack()
+
+        default = self._matrix_to_str(self._build_J())
+        text = scrolledtext.ScrolledText(
+            dlg,
+            width=40,
+            height=self.N + 2,
+            font=("Courier New", 10),
+            bg="#334155",
+            fg="#f8fafc",
+            insertbackground="white",
+        )
+        text.insert("1.0", default)
+        text.pack(padx=10, pady=4)
+
+        def _apply() -> None:
+            try:
+                rows = text.get("1.0", tk.END).strip().splitlines()
+                mat = np.array([[float(v) for v in r.split()] for r in rows])
+                if mat.shape != (self.N, self.N):
+                    raise ValueError(f"Expected {self.N}×{self.N}, got {mat.shape}")
+                self._custom_J = mat
+                dlg.destroy()
+                self._refresh()
+            except Exception as exc:
+                messagebox.showerror("Invalid input", str(exc), parent=dlg)
+
+        ttk.Button(dlg, text="Apply", command=_apply).pack(pady=6)

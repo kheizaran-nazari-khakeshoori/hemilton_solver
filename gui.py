@@ -131,3 +131,7 @@ class IsingGUI:
     def _set_alternating(self) -> None:
         self.spins = [1 if i % 2 == 0 else -1 for i in range(self.N)]
         self._refresh()
+
+    def _set_random(self) -> None:
+        self.spins = list(np.random.choice([1, -1], size=self.N))
+        self._refresh()

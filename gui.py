@@ -153,3 +153,11 @@ class IsingGUI:
     def _on_topology_change(self) -> None:
         self._update_manual_connection_state()
         self._refresh()
+
+    def _update_manual_connection_state(self) -> None:
+        enabled = self._topology_var.get() == "Custom"
+        for widget in self._manual_controls:
+            if enabled:
+                widget.state(["!disabled"])
+            else:
+                widget.state(["disabled"])

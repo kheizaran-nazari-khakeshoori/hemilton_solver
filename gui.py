@@ -127,3 +127,7 @@ class IsingGUI:
     def _set_all(self, val: int) -> None:
         self.spins = [val] * self.N
         self._refresh()
+
+    def _set_alternating(self) -> None:
+        self.spins = [1 if i % 2 == 0 else -1 for i in range(self.N)]
+        self._refresh()

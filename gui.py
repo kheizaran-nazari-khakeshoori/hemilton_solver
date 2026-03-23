@@ -389,3 +389,6 @@ class IsingGUI:
     @staticmethod
     def _matrix_to_str(mat: np.ndarray) -> str:
         return "\n".join("  ".join(f"{v:6.2f}" for v in row) for row in mat)
+
+    def _refresh(self) -> None:
+        self._draw_spins()

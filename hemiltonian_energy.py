@@ -1,93 +1,66 @@
-"""
-Ising Model Hamiltonian
-=======================
-Computes the energy of a spin configuration under the Ising model:
+"""QAP objective utilities.
 
-    H(s) = -sum_{i<j} J_ij * s_i * s_j  -  sum_i h_i * s_i
+This module provides the canonical Quadratic Assignment Problem (QAP) cost:
 
-where:
-    s   - spin configuration, each s_i in {-1, +1}
-    J   - coupling matrix (J[i][j] = interaction strength between spins i and j)
-    h   - external magnetic field vector (h[i] = local field at site i)
+    cost(P) = sum_{i,j} F[i,j] * D[P[i], P[j]]
+
+where P is a permutation that assigns facility i to location P[i].
 """
 
 import numpy as np
 
 
-def hamiltonian(s: np.ndarray, J: np.ndarray, h: np.ndarray) -> float:
-    """
-    Calculate the Ising model Hamiltonian for a given spin configuration.
-
-    Parameters
-    ----------
-    s : np.ndarray, shape (N,)
-        Spin configuration; each element must be +1 or -1.
-    J : np.ndarray, shape (N, N)
-        Coupling matrix. Only the upper triangle (i < j) is used.
-    h : np.ndarray, shape (N,)
-        External magnetic field at each spin site.
-
-    Returns
-    -------
-    float
-        The total energy H(s).
-    """
-    s = np.asarray(s, dtype=float)
-    J = np.asarray(J, dtype=float)
-    h = np.asarray(h, dtype=float)
-
-    N = len(s)
-    if J.shape != (N, N):
-        raise ValueError(f"J must be ({N}, {N}), got {J.shape}")
-    if h.shape != (N,):
-        raise ValueError(f"h must be ({N},), got {h.shape}")
-
-    interaction_energy = 0.0
-    for i in range(N):
-        for j in range(i + 1, N):
-            interaction_energy += J[i, j] * s[i] * s[j]
-
-    field_energy = np.dot(h, s)
-
-    return -interaction_energy - field_energy
+def permutation_to_assignment(P: np.ndarray) -> np.ndarray:
+    """Convert permutation vector P to binary assignment matrix X."""
+    P = np.asarray(P, dtype=int)
+    N = len(P)
+    X = np.zeros((N, N), dtype=int)
+    X[np.arange(N), P] = 1
+    return X
 
 
-def hamiltonian_vectorized(s: np.ndarray, J: np.ndarray, h: np.ndarray) -> float:
-    """
-    Vectorized equivalent of `hamiltonian` using NumPy for efficiency.
-    Extracts the upper triangle of J to enforce the i < j constraint.
-    """
-    s = np.asarray(s, dtype=float)
-    J = np.asarray(J, dtype=float)
-    h = np.asarray(h, dtype=float)
+def qap_cost(F: np.ndarray, D: np.ndarray, P: np.ndarray) -> float:
+    """Compute canonical QAP cost for a permutation assignment."""
+    F = np.asarray(F, dtype=float)
+    D = np.asarray(D, dtype=float)
+    P = np.asarray(P, dtype=int)
 
-    i_idx, j_idx = np.triu_indices(len(s), k=1)
-    interaction_energy = np.sum(J[i_idx, j_idx] * s[i_idx] * s[j_idx])
-    field_energy = np.dot(h, s)
+    N = len(P)
+    if F.shape != (N, N):
+        raise ValueError(f"F must be ({N}, {N}), got {F.shape}")
+    if D.shape != (N, N):
+        raise ValueError(f"D must be ({N}, {N}), got {D.shape}")
+    if set(P.tolist()) != set(range(N)):
+        raise ValueError("P must be a valid permutation of [0..N-1]")
 
-    return -interaction_energy - field_energy
+    return float(np.sum(F * D[np.ix_(P, P)]))
+
+
+def qap_cost_matrix(F: np.ndarray, D: np.ndarray, P: np.ndarray) -> float:
+    """Matrix-form QAP cost using assignment matrix X."""
+    X = permutation_to_assignment(P)
+    return float(np.sum((F @ X @ D) * X))
+
+
+def hamiltonian_vectorized(P: np.ndarray, F: np.ndarray, D: np.ndarray) -> float:
+    """Backward-compatible alias for callers still using old function name."""
+    return qap_cost(F, D, P)
 
 
 if __name__ == "__main__":
-    N = 4
-    s = np.array([1, 1, 1, 1])
+    N = 5
+    rng = np.random.default_rng(42)
+    F = rng.integers(0, 10, size=(N, N)).astype(float)
+    D = rng.integers(0, 10, size=(N, N)).astype(float)
+    np.fill_diagonal(F, 0)
+    np.fill_diagonal(D, 0)
+    P = rng.permutation(N)
 
-    J = np.zeros((N, N))
-    for i in range(N - 1):
-        J[i, i + 1] = 1.0
+    c1 = qap_cost(F, D, P)
+    c2 = qap_cost_matrix(F, D, P)
 
-    h = np.full(N, 0.5)
-
-    energy = hamiltonian_vectorized(s, J, h)
-
-    print("Ising Model Hamiltonian Demo")
+    print("QAP Objective Demo")
     print("=" * 40)
-    print(f"Spins          : {s.tolist()}")
-    print(f"Coupling J     :\n{J}")
-    print(f"External field : {h.tolist()}")
-    print(f"H(s)           : {energy:.4f}")
-
-    s_down = np.array([-1, -1, -1, -1])
-    print()
-    print(f"H(all +1) = {hamiltonian_vectorized(s, J, h):.4f}")
-    print(f"H(all -1) = {hamiltonian_vectorized(s_down, J, h):.4f}")
+    print(f"Permutation P  : {P.tolist()}")
+    print(f"QAP cost       : {c1:.4f}")
+    print(f"Matrix formula : {c2:.4f}")

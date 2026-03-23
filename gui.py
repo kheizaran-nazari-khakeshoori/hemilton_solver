@@ -325,3 +325,34 @@ class IsingGUI:
             self._populate_calculation_tabs(tab_widgets, eval_widgets)
 
         _run_and_display()
+
+    def _populate_calculation_tabs(
+        self,
+        tab_widgets: dict[str, scrolledtext.ScrolledText],
+        eval_widgets: dict[str, object],
+    ) -> None:
+        try:
+            s = np.array(self.spins, dtype=float)
+            J = self._build_J()
+            h = self._build_h()
+            bundle = run_all_calculations_bundle(s, J, h)
+            results = bundle["texts"]
+            metrics = bundle["metrics"]
+        except Exception as exc:
+            err_text = f"Calculation error:\n{exc}\n"
+            for txt in tab_widgets.values():
+                txt.configure(state=tk.NORMAL)
+                txt.delete("1.0", tk.END)
+                txt.insert("1.0", err_text)
+                txt.configure(state=tk.DISABLED)
+            clear_evaluation_tab(eval_widgets)
+            return
+
+        for tab_name, txt in tab_widgets.items():
+            body = results.get(tab_name, "No result available.\n")
+            txt.configure(state=tk.NORMAL)
+            txt.delete("1.0", tk.END)
+            txt.insert("1.0", body)
+            txt.configure(state=tk.DISABLED)
+
+        render_evaluation(metrics, eval_widgets)

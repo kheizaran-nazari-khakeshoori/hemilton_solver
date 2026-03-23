@@ -472,3 +472,20 @@ class IsingGUI:
                 self.spins[i] *= -1
                 self._refresh()
                 break
+
+
+def main() -> None:
+    root = tk.Tk()
+    try:
+        root.state("zoomed")
+    except tk.TclError:
+        sw = root.winfo_screenwidth()
+        sh = root.winfo_screenheight()
+        root.geometry(f"{sw}x{sh}+0+0")
+    root.minsize(520, 480)
+    IsingGUI(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

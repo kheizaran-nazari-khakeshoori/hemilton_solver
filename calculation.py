@@ -9,8 +9,8 @@ import numpy as np
 
 from hemiltonian_energy import qap_cost
 from pure_simulated_annealing import pure_simulated_annealing
-from genetic_algorithm import genetic_algorithm
-from tabu_search import tabu_search
+# from genetic_algorithm import genetic_algorithm
+# from tabu_search import tabu_search
 
 
 def _validate_inputs(permutation_seed: np.ndarray, F: np.ndarray, D: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -134,10 +134,10 @@ def run_all_calculations_bundle(permutation_seed: np.ndarray, F: np.ndarray, D: 
 
 	trials = 5
 	sa_steps = max(1_500, min(8_000, n * 450))
-	ga_population = max(24, min(100, 4 * n))
-	ga_generations = max(60, min(220, 12 * n))
-	tabu_iterations = max(80, min(450, 18 * n))
-	tabu_tenure = max(5, min(20, n // 2))
+	# ga_population = max(24, min(100, 4 * n))
+	# ga_generations = max(60, min(220, 12 * n))
+	# tabu_iterations = max(80, min(450, 18 * n))
+	# tabu_tenure = max(5, min(20, n // 2))
 
 	header = _format_header(p0, F, D)
 	initial_cost = float(qap_cost(F, D, p0))
@@ -167,63 +167,60 @@ def run_all_calculations_bundle(permutation_seed: np.ndarray, F: np.ndarray, D: 
 		sa_step_best[r] = float(_first_best_step(sa.cost_trace))
 	sa_total = time.perf_counter() - t0
 	all_best_candidates.append(float(np.min(sa_best)))
-
-	ga_best = np.empty(trials, dtype=float)
-	ga_step_best = np.empty(trials, dtype=float)
-	t0 = time.perf_counter()
-	for r in range(trials):
-		ga = genetic_algorithm(
-			p0=np.roll(p0, r),
-			F=F,
-			D=D,
-			population_size=ga_population,
-			generations=ga_generations,
-			elite_fraction=0.12,
-			mutation_rate=0.25,
-			tournament_k=4,
-			seed=77 + r,
-		)
-		ga_best[r] = float(ga.best_cost)
-		ga_step_best[r] = float(_first_best_step(ga.history_best_cost))
-	ga_total = time.perf_counter() - t0
-	all_best_candidates.append(float(np.min(ga_best)))
-
-	ts_best = np.empty(trials, dtype=float)
-	ts_step_best = np.empty(trials, dtype=float)
-	t0 = time.perf_counter()
-	for _ in range(trials):
-		ts = tabu_search(
-			p0=np.roll(p0, _),
-			F=F,
-			D=D,
-			iterations=tabu_iterations,
-			tabu_tenure=tabu_tenure,
-			max_no_improve=max(40, tabu_iterations // 3),
-		)
-		ts_best[_] = float(ts.best_cost)
-		ts_step_best[_] = float(_first_best_step(ts.history_best_cost))
-	ts_total = time.perf_counter() - t0
-	all_best_candidates.append(float(np.min(ts_best)))
+	# Genetic Algorithm and Tabu Search are disabled for this configuration.
+	#
+	# ga_best = np.empty(trials, dtype=float)
+	# ga_step_best = np.empty(trials, dtype=float)
+	# t0 = time.perf_counter()
+	# for r in range(trials):
+	# 	ga = genetic_algorithm(
+	# 		p0=np.roll(p0, r),
+	# 		F=F,
+	# 		D=D,
+	# 		population_size=ga_population,
+	# 		generations=ga_generations,
+	# 		elite_fraction=0.12,
+	# 		mutation_rate=0.25,
+	# 		tournament_k=4,
+	# 		seed=77 + r,
+	# 	)
+	# 	ga_best[r] = float(ga.best_cost)
+	# 	ga_step_best[r] = float(_first_best_step(ga.history_best_cost))
+	# ga_total = time.perf_counter() - t0
+	# all_best_candidates.append(float(np.min(ga_best)))
+	#
+	# ts_best = np.empty(trials, dtype=float)
+	# ts_step_best = np.empty(trials, dtype=float)
+	# t0 = time.perf_counter()
+	# for _ in range(trials):
+	# 	ts = tabu_search(
+	# 		p0=np.roll(p0, _),
+	# 		F=F,
+	# 		D=D,
+	# 		iterations=tabu_iterations,
+	# 		tabu_tenure=tabu_tenure,
+	# 		max_no_improve=max(40, tabu_iterations // 3),
+	# 	)
+	# 	ts_best[_] = float(ts.best_cost)
+	# 	ts_step_best[_] = float(_first_best_step(ts.history_best_cost))
+	# ts_total = time.perf_counter() - t0
+	# all_best_candidates.append(float(np.min(ts_best)))
 
 	reference_best = float(np.min(np.array(all_best_candidates, dtype=float)))
 
 	h_cost = float(trials)
 	sa_cost = float(trials * sa_steps)
-	ga_cost = float(trials * ga_population * (ga_generations + 1))
-	ts_cost = float(trials * tabu_iterations * (n * (n - 1) // 2))
+	# ga_cost = float(trials * ga_population * (ga_generations + 1))
+	# ts_cost = float(trials * tabu_iterations * (n * (n - 1) // 2))
 
 	metrics = {
 		"QAP Objective": _compute_metrics_dict(1, h_cost, h_total, h_best_arr, h_step_arr, reference_best),
 		"Simulated Annealing": _compute_metrics_dict(sa_steps, sa_cost, sa_total, sa_best, sa_step_best, reference_best),
-		"Genetic Algorithm": _compute_metrics_dict(ga_generations, ga_cost, ga_total, ga_best, ga_step_best, reference_best),
-		"Tabu Search": _compute_metrics_dict(tabu_iterations, ts_cost, ts_total, ts_best, ts_step_best, reference_best),
 	}
 
 	texts = {
 		"QAP Objective": header + "\n" + _format_metrics_block("QAP Objective", 1, h_cost, h_total, h_best_arr, h_step_arr, reference_best),
 		"Simulated Annealing": header + "\n" + _format_metrics_block("Pure Simulated Annealing", sa_steps, sa_cost, sa_total, sa_best, sa_step_best, reference_best),
-		"Genetic Algorithm": header + "\n" + _format_metrics_block("Genetic Algorithm", ga_generations, ga_cost, ga_total, ga_best, ga_step_best, reference_best),
-		"Tabu Search": header + "\n" + _format_metrics_block("Tabu Search", tabu_iterations, ts_cost, ts_total, ts_best, ts_step_best, reference_best),
 	}
 
 	return {"texts": texts, "metrics": metrics}

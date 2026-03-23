@@ -1,15 +1,10 @@
-"""
-Ising Model GUI
-===============
-Interactive visualiser for the Ising model Hamiltonian.
-"""
+"""QAP GUI with local-solver comparison tabs."""
 
 import math
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import numpy as np
 
-from hemiltonian_energy import hamiltonian_vectorized
 from calculation import run_all_calculations_bundle
 from evaluation import create_evaluation_tab, clear_evaluation_tab, render_evaluation
 
@@ -28,7 +23,7 @@ class IsingGUI:
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("Ising Model — Hamiltonian Visualiser")
+        self.root.title("QAP Solver — Visualiser")
         self.root.configure(bg="#1e293b")
 
         self.N = 6
@@ -68,10 +63,10 @@ class IsingGUI:
         ttk.Entry(top, textvariable=self._j_var, width=8).grid(row=1, column=1, padx=4)
         ttk.Button(top, text="Custom J matrix…", command=self._open_custom_J).grid(row=1, column=2, padx=8)
 
-        ttk.Label(top, text="Field  h:").grid(row=2, column=0, sticky=tk.W, padx=4)
-        self._h_var = tk.StringVar(value="0.5")
+        ttk.Label(top, text="Distance  D:").grid(row=2, column=0, sticky=tk.W, padx=4)
+        self._h_var = tk.StringVar(value="1.0")
         ttk.Entry(top, textvariable=self._h_var, width=8).grid(row=2, column=1, padx=4)
-        ttk.Button(top, text="Custom h vector…", command=self._open_custom_h).grid(row=2, column=2, padx=8)
+        ttk.Button(top, text="Custom D matrix…", command=self._open_custom_h).grid(row=2, column=2, padx=8)
 
         self._topology_var = tk.StringVar(value="Custom")
         self._topology_var.trace_add("write", lambda *_: self._on_topology_change())
@@ -81,11 +76,11 @@ class IsingGUI:
         ttk.Radiobutton(conn, text="Chain", value="Chain (1D)", variable=self._topology_var).grid(row=0, column=3, sticky=tk.W, padx=2)
         ttk.Radiobutton(conn, text="Full", value="Fully Connected", variable=self._topology_var).grid(row=0, column=4, sticky=tk.W, padx=2)
 
-        ttk.Label(conn, text="sᵢ:").grid(row=1, column=0, sticky=tk.W, padx=(2, 2), pady=(8, 0))
+        ttk.Label(conn, text="fᵢ:").grid(row=1, column=0, sticky=tk.W, padx=(2, 2), pady=(8, 0))
         self._pair_i_var = tk.IntVar(value=1)
         self._pair_i_spin = ttk.Spinbox(conn, from_=1, to=30, textvariable=self._pair_i_var, width=5)
         self._pair_i_spin.grid(row=1, column=1, sticky=tk.W, padx=2, pady=(8, 0))
-        ttk.Label(conn, text="sⱼ:").grid(row=1, column=2, sticky=tk.W, padx=(6, 2), pady=(8, 0))
+        ttk.Label(conn, text="fⱼ:").grid(row=1, column=2, sticky=tk.W, padx=(6, 2), pady=(8, 0))
         self._pair_j_var = tk.IntVar(value=5)
         self._pair_j_spin = ttk.Spinbox(conn, from_=1, to=30, textvariable=self._pair_j_var, width=5)
         self._pair_j_spin.grid(row=1, column=3, sticky=tk.W, padx=2, pady=(8, 0))
@@ -116,7 +111,7 @@ class IsingGUI:
 
         self._update_manual_connection_state()
 
-        cf = ttk.LabelFrame(self.root, text="Spin Configuration  —  click a spin to flip it", padding=4)
+        cf = ttk.LabelFrame(self.root, text="Permutation Seed — click a node to toggle seed value", padding=4)
         cf.pack(fill=tk.BOTH, expand=True, padx=10, pady=4)
 
         self._canvas = tk.Canvas(cf, bg=BG_CANVAS, height=300, highlightthickness=0)
@@ -175,10 +170,10 @@ class IsingGUI:
             return
 
         if not (0 <= i < self.N and 0 <= j < self.N):
-            messagebox.showerror("Out of range", f"Spin numbers must be between 1 and {self.N}.")
+            messagebox.showerror("Out of range", f"Indices must be between 1 and {self.N}.")
             return
         if i == j:
-            messagebox.showerror("Invalid pair", "Please choose two different spins.")
+            messagebox.showerror("Invalid pair", "Please choose two different facilities.")
             return
 
         if self._custom_J is None:
@@ -255,23 +250,32 @@ class IsingGUI:
 
     def _open_custom_h(self) -> None:
         dlg = tk.Toplevel(self.root)
-        dlg.title("Custom Field Vector h")
+        dlg.title("Custom Distance Matrix D")
         dlg.configure(bg="#1e293b")
         dlg.resizable(False, False)
 
-        ttk.Label(dlg, text=f"Enter {self.N} space-separated values for h:", padding=8).pack()
+        ttk.Label(dlg, text=f"Enter {self.N}x{self.N} space-separated values for D:", padding=8).pack()
 
-        default = " ".join(str(v) for v in self._build_h())
-        entry = ttk.Entry(dlg, width=40, font=("Courier New", 10))
-        entry.insert(0, default)
-        entry.pack(padx=10, pady=4)
+        default = self._matrix_to_str(self._build_h())
+        text = scrolledtext.ScrolledText(
+            dlg,
+            width=40,
+            height=self.N + 2,
+            font=("Courier New", 10),
+            bg="#334155",
+            fg="#f8fafc",
+            insertbackground="white",
+        )
+        text.insert("1.0", default)
+        text.pack(padx=10, pady=4)
 
         def _apply() -> None:
             try:
-                vec = np.array([float(v) for v in entry.get().split()])
-                if vec.shape != (self.N,):
-                    raise ValueError(f"Expected {self.N} values, got {len(vec)}")
-                self._custom_h = vec
+                rows = text.get("1.0", tk.END).strip().splitlines()
+                mat = np.array([[float(v) for v in r.split()] for r in rows])
+                if mat.shape != (self.N, self.N):
+                    raise ValueError(f"Expected {self.N}x{self.N}, got {mat.shape}")
+                self._custom_h = mat
                 dlg.destroy()
                 self._refresh()
             except Exception as exc:
@@ -295,7 +299,7 @@ class IsingGUI:
         toolbar.pack(fill=tk.X)
         ttk.Label(
             toolbar,
-            text="Run all algorithms with current GUI parameters (s, J, h)",
+            text="Run all algorithms with current GUI parameters (seed, F, D)",
             font=("Segoe UI", 10, "bold"),
         ).pack(side=tk.LEFT)
 
@@ -303,7 +307,7 @@ class IsingGUI:
         notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
         tab_widgets: dict[str, scrolledtext.ScrolledText] = {}
-        for name in ["Hamiltonian Energy", "Simulated Annealing", "Genetic Algorithm", "Tabu Search"]:
+        for name in ["QAP Objective", "Simulated Annealing", "Genetic Algorithm", "Tabu Search"]:
             tab = ttk.Frame(notebook)
             notebook.add(tab, text=name)
             txt = scrolledtext.ScrolledText(
@@ -383,8 +387,11 @@ class IsingGUI:
         try:
             val = float(self._h_var.get())
         except ValueError:
-            val = 0.0
-        return np.full(self.N, val)
+            val = 1.0
+        idx = np.arange(self.N)
+        base = np.abs(idx[:, None] - idx[None, :]).astype(float)
+        np.fill_diagonal(base, 0.0)
+        return val * base
 
     @staticmethod
     def _matrix_to_str(mat: np.ndarray) -> str:
@@ -453,18 +460,18 @@ class IsingGUI:
 
             val_text = "+1" if spin == 1 else "−1"
             c.create_text(cx, cy - r - 12, text=val_text, fill=color, font=("Arial", 8, "bold"))
-            c.create_text(cx, cy + r + 12, text=f"s{i + 1}", fill=COL_LABEL, font=("Arial", 8))
+            c.create_text(cx, cy + r + 12, text=f"f{i + 1}", fill=COL_LABEL, font=("Arial", 8))
 
             self._hit_boxes.append((cx, cy, r))
 
         c.create_oval(6, H - 22, 18, H - 10, fill=COL_UP, outline="")
-        c.create_text(22, H - 16, text="+1 spin up", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
+        c.create_text(22, H - 16, text="seed +1", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
         c.create_oval(80, H - 22, 92, H - 10, fill=COL_DOWN, outline="")
-        c.create_text(96, H - 16, text="−1 spin down", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
+        c.create_text(96, H - 16, text="seed -1", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
         c.create_line(160, H - 16, 185, H - 16, fill="#22c55e", width=2)
-        c.create_text(188, H - 16, text="J>0 ferro", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
+        c.create_text(188, H - 16, text="F>0", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
         c.create_line(258, H - 16, 283, H - 16, fill="#f97316", width=2)
-        c.create_text(286, H - 16, text="J<0 antiferro", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
+        c.create_text(286, H - 16, text="F<0", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
 
     def _on_canvas_click(self, event: tk.Event) -> None:
         for i, (cx, cy, r) in enumerate(self._hit_boxes):

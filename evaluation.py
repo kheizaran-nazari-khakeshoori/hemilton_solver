@@ -25,7 +25,7 @@ def create_evaluation_tab(notebook: ttk.Notebook) -> dict[str, object]:
 	eval_tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=8)
 	eval_tree.heading("algo", text="Algorithm")
 	eval_tree.heading("runtime", text="Runtime (s)")
-	eval_tree.heading("best", text="Best Energy")
+	eval_tree.heading("best", text="Best Cost")
 	eval_tree.heading("success", text="Success %")
 	eval_tree.heading("residual", text="Residual")
 	eval_tree.column("algo", width=180, anchor=tk.W)

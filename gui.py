@@ -465,3 +465,10 @@ class IsingGUI:
         c.create_text(188, H - 16, text="J>0 ferro", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
         c.create_line(258, H - 16, 283, H - 16, fill="#f97316", width=2)
         c.create_text(286, H - 16, text="J<0 antiferro", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
+
+    def _on_canvas_click(self, event: tk.Event) -> None:
+        for i, (cx, cy, r) in enumerate(self._hit_boxes):
+            if (event.x - cx) ** 2 + (event.y - cy) ** 2 <= r ** 2:
+                self.spins[i] *= -1
+                self._refresh()
+                break

@@ -278,3 +278,50 @@ class IsingGUI:
                 messagebox.showerror("Invalid input", str(exc), parent=dlg)
 
         ttk.Button(dlg, text="Apply", command=_apply).pack(pady=6)
+
+    def _open_calculations_window(self) -> None:
+        dlg = tk.Toplevel(self.root)
+        dlg.title("Calculations")
+        dlg.configure(bg="#1e293b")
+        try:
+            dlg.state("zoomed")
+        except tk.TclError:
+            sw = dlg.winfo_screenwidth()
+            sh = dlg.winfo_screenheight()
+            dlg.geometry(f"{sw}x{sh}+0+0")
+        dlg.minsize(640, 360)
+
+        toolbar = ttk.Frame(dlg, padding=8)
+        toolbar.pack(fill=tk.X)
+        ttk.Label(
+            toolbar,
+            text="Run all algorithms with current GUI parameters (s, J, h)",
+            font=("Segoe UI", 10, "bold"),
+        ).pack(side=tk.LEFT)
+
+        notebook = ttk.Notebook(dlg)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+
+        tab_widgets: dict[str, scrolledtext.ScrolledText] = {}
+        for name in ["Hamiltonian Energy", "Simulated Annealing", "Genetic Algorithm", "Tabu Search"]:
+            tab = ttk.Frame(notebook)
+            notebook.add(tab, text=name)
+            txt = scrolledtext.ScrolledText(
+                tab,
+                wrap=tk.WORD,
+                font=("Courier New", 10),
+                bg="#0f172a",
+                fg="#e2e8f0",
+                insertbackground="#e2e8f0",
+            )
+            txt.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+            txt.insert("1.0", "Running calculations...\n")
+            txt.configure(state=tk.DISABLED)
+            tab_widgets[name] = txt
+
+        eval_widgets = create_evaluation_tab(notebook)
+
+        def _run_and_display() -> None:
+            self._populate_calculation_tabs(tab_widgets, eval_widgets)
+
+        _run_and_display()

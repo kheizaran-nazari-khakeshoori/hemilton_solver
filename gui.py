@@ -385,3 +385,7 @@ class IsingGUI:
         except ValueError:
             val = 0.0
         return np.full(self.N, val)
+
+    @staticmethod
+    def _matrix_to_str(mat: np.ndarray) -> str:
+        return "\n".join("  ".join(f"{v:6.2f}" for v in row) for row in mat)

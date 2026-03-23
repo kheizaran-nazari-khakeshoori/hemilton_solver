@@ -1,10 +1,11 @@
-"""Project entry point.
+"""Project entry point for running batch QAP experiments.
 
-Run this file to launch the Ising model GUI.
+Run this file to execute run_batch_experiments.main, which iterates over
+all generated instances and writes aggregated metrics to batch_results.csv.
 """
 
-from gui import main as run_gui
+from run_batch_experiments import main as run_batch_experiments
 
 
 if __name__ == "__main__":
-	run_gui()
+	run_batch_experiments()

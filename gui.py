@@ -356,3 +356,23 @@ class IsingGUI:
             txt.configure(state=tk.DISABLED)
 
         render_evaluation(metrics, eval_widgets)
+
+    def _build_J(self) -> np.ndarray:
+        topo = self._topology_var.get()
+        J = np.zeros((self.N, self.N))
+        if topo == "Custom":
+            return self._custom_J if self._custom_J is not None else J
+        if topo == "None (disconnected)":
+            return J
+        try:
+            val = float(self._j_var.get())
+        except ValueError:
+            val = 1.0
+        if topo == "Fully Connected":
+            for i in range(self.N):
+                for j in range(i + 1, self.N):
+                    J[i, j] = val
+        else:
+            for i in range(self.N - 1):
+                J[i, i + 1] = val
+        return J

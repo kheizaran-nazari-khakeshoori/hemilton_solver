@@ -376,3 +376,12 @@ class IsingGUI:
             for i in range(self.N - 1):
                 J[i, i + 1] = val
         return J
+
+    def _build_h(self) -> np.ndarray:
+        if hasattr(self, "_custom_h") and self._custom_h is not None:
+            return self._custom_h
+        try:
+            val = float(self._h_var.get())
+        except ValueError:
+            val = 0.0
+        return np.full(self.N, val)

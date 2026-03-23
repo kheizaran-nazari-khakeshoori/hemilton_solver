@@ -392,3 +392,76 @@ class IsingGUI:
 
     def _refresh(self) -> None:
         self._draw_spins()
+
+    def _draw_spins(self) -> None:
+        c = self._canvas
+        c.delete("all")
+
+        W = c.winfo_width()
+        H = c.winfo_height()
+        if W < 10:
+            W = 700
+        if H < 10:
+            H = 300
+
+        N = self.N
+        J = self._build_J()
+
+        if N == 2:
+            r = self.RADIUS_MAX
+            positions: list[tuple[float, float]] = [(W / 3, H / 2), (2 * W / 3, H / 2)]
+        else:
+            margin = 55
+            ring_r = min(W, H) / 2 - margin
+            r = min(self.RADIUS_MAX, max(self.RADIUS_MIN, int(ring_r / (N + 1) * 2)))
+            ring_r = max(ring_r, r * 3)
+            cx0, cy0 = W / 2, H / 2
+            positions = []
+            for i in range(N):
+                angle = 2 * math.pi * i / N - math.pi / 2
+                positions.append((cx0 + ring_r * math.cos(angle), cy0 + ring_r * math.sin(angle)))
+
+        self._hit_boxes: list[tuple[int, int, int]] = []
+
+        i_idx, j_idx = np.triu_indices(N, k=1)
+        nonzero_pairs = [(i, j) for i, j in zip(i_idx, j_idx) if J[i, j] != 0]
+        max_j_abs = max((abs(J[i, j]) for i, j in nonzero_pairs), default=1.0)
+
+        for i, j in nonzero_pairs:
+            jval = J[i, j]
+            x1, y1 = positions[i]
+            x2, y2 = positions[j]
+            line_w = max(1, round(abs(jval) / max_j_abs * 4))
+            line_col = "#22c55e" if jval > 0 else "#f97316"
+            dash: tuple = () if abs(jval) >= max_j_abs * 0.5 else (4, 4)
+            c.create_line(x1, y1, x2, y2, fill=line_col, width=line_w, dash=dash)
+            if N <= 8:
+                mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+                c.create_text(mx, my - 6, text=f"{jval:.1f}", fill="#475569", font=("Arial", 7))
+
+        for i, spin in enumerate(self.spins):
+            cx, cy = int(positions[i][0]), int(positions[i][1])
+            color = COL_UP if spin == 1 else COL_DOWN
+
+            c.create_oval(cx - r, cy - r, cx + r, cy + r, fill=color, outline=COL_VAL, width=2)
+
+            shaft = max(4, r - 6)
+            if spin == 1:
+                c.create_line(cx, cy + shaft // 2, cx, cy - shaft // 2, fill="white", width=2, arrow=tk.LAST, arrowshape=(6, 8, 3))
+            else:
+                c.create_line(cx, cy - shaft // 2, cx, cy + shaft // 2, fill="white", width=2, arrow=tk.LAST, arrowshape=(6, 8, 3))
+
+            val_text = "+1" if spin == 1 else "−1"
+            c.create_text(cx, cy - r - 12, text=val_text, fill=color, font=("Arial", 8, "bold"))
+            c.create_text(cx, cy + r + 12, text=f"s{i + 1}", fill=COL_LABEL, font=("Arial", 8))
+
+            self._hit_boxes.append((cx, cy, r))
+
+        c.create_oval(6, H - 22, 18, H - 10, fill=COL_UP, outline="")
+        c.create_text(22, H - 16, text="+1 spin up", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
+        c.create_oval(80, H - 22, 92, H - 10, fill=COL_DOWN, outline="")
+        c.create_text(96, H - 16, text="−1 spin down", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
+        c.create_line(160, H - 16, 185, H - 16, fill="#22c55e", width=2)
+        c.create_text(188, H - 16, text="J>0 ferro", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))
+        c.create_line(258, H - 16, 283, H - 16, fill="#f97316", width=2)
+        c.create_text(286, H - 16, text="J<0 antiferro", anchor=tk.W, fill=COL_LABEL, font=("Arial", 8))

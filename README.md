@@ -45,3 +45,21 @@ and prints summary statistics including the SA success rate.
 
 The exact solver is only intended for very small N (default N ≤ 10),
 because the number of permutations grows as N!.
+
+## Simulated Annealing performance across sizes
+
+To analyze how SA behaves for all sizes
+`[10, 15, 20, 25, 50, 75, 100]`, first run the batch experiments:
+
+	python run_batch_experiments.py
+
+This produces `batch_results.csv` containing per-instance metrics for
+each algorithm. To visualize only the Simulated Annealing performance
+across sizes (e.g. mean residual energy, success probability, and
+residual distributions), run:
+
+	python plot_batch_sa_performance.py
+
+This script reads `batch_results.csv` and writes several PNG figures
+into the `plots/` directory, summarizing how SA performance scales with
+problem size.

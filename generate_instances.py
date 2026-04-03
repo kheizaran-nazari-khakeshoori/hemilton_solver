@@ -31,21 +31,21 @@ def main() -> None:
         rng = np.random.default_rng(42 + N)
 
         for k in range(1, INSTANCES_PER_SIZE + 1):
-            # Generate symmetric, non-negative flow and distance matrices
-            # with zero diagonal, as suggested in the project discussion.
-            #
-            # Draw random upper triangles (excluding the diagonal), then
-            # mirror them to enforce symmetry.
+            # Generate symmetric, non-negative flow matrix with zero diagonal.
             F_upper = rng.integers(0, 10, size=(N, N)).astype(float)
             F = np.triu(F_upper, k=1)
             F = F + F.T
-
-            D_upper = rng.integers(0, 10, size=(N, N)).astype(float)
-            D = np.triu(D_upper, k=1)
-            D = D + D.T
-
-            # Ensure exact zeros on the diagonal (no self-flow / self-distance).
             np.fill_diagonal(F, 0.0)
+
+            # Generate Euclidean distance matrix D from random points in a square.
+            # Sample N points (x_i, y_i) uniformly in [0, 1] x [0, 1], then set
+            # D_ij = sqrt((x_i - x_j)^2 + (y_i - y_j)^2).
+            coords = rng.random((N, 2))
+            dx = coords[:, 0][:, None] - coords[:, 0][None, :]
+            dy = coords[:, 1][:, None] - coords[:, 1][None, :]
+            D = np.sqrt(dx * dx + dy * dy)
+
+            # Ensure exact zeros on the diagonal (no self-distance).
             np.fill_diagonal(D, 0.0)
 
             filename = OUTPUT_DIR / f"{N}-{k}.npz"

@@ -41,8 +41,11 @@ SIZE = 10
 INSTANCE_IDS = [1, 2, 3]
 
 # Grid over final inverse temperature beta and total steps N.
-BETA_MIN = 0.1
-BETA_MAX = 2.0
+# After the initial coarse scan (0.1--2.0) indicated that the best
+# performance occurs at the smallest tested beta, we refine the range
+# to smaller values as suggested by the supervisor.
+BETA_MIN = 0.01
+BETA_MAX = 0.11
 N_BETA_VALUES = 10
 
 STEPS_MIN = 100

@@ -2,7 +2,8 @@
 
 This script reads the CSV produced by sa_schedule_grid_search_size10.py
 and generates coloured plots of the metrics as functions of
-(final beta, total number of swaps).
+(final beta, total number of swaps). These plots are primarily for
+visual inspection when choosing a good schedule.
 
 For each of the three selected instances it produces, at least, a
 heatmap of the probability of solving:

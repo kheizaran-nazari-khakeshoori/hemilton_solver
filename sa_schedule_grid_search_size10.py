@@ -37,7 +37,8 @@ SIZE = 10
 
 # For the schedule grid search, use three representative instances.
 # These can be adjusted if desired (e.g., randomly chosen with a
-# fixed seed), but using the first three keeps things deterministic.
+# fixed seed), but using the first three keeps things deterministic
+# and keeps the runtime manageable while tuning hyperparameters.
 INSTANCE_IDS = [1, 2, 3]
 
 # Grid over final inverse temperature beta and total steps N.

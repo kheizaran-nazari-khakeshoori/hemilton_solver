@@ -12,6 +12,8 @@ STS is defined as:
 
 where N_steps is the number of Metropolis swaps per run and p is the
 probability of solving (reaching the ground state) for that schedule.
+Lower STS values correspond to more efficient schedules in terms of
+steps required to reach a given confidence level.
 """
 
 from __future__ import annotations

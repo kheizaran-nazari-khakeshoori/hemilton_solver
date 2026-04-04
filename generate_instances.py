@@ -6,6 +6,9 @@ arrays with keys "F" (flow matrix) and "D" (distance matrix).
 Sizes: [10, 15, 20, 25, 50, 75, 100]
 Instances per size: 100
 
+F is a synthetic symmetric flow matrix (non-negative, zero diagonal).
+D is a Euclidean distance matrix computed from random 2D coordinates.
+
 Run this script once to populate the "instances/" directory:
 
     python generate_instances.py

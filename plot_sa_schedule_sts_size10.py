@@ -39,6 +39,7 @@ def main() -> None:
 
     df = pd.read_csv(INPUT_CSV)
 
+    # We average solving probability over the three size-10 instances in the grid.
     required_cols = {"beta_final", "steps", "prob_solved"}
     if not required_cols.issubset(df.columns):
         raise SystemExit(

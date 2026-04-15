@@ -86,6 +86,7 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(6, 5))
 
     # Use a log scale for STS to improve contrast, ignoring NaNs.
+    # Log scale makes large STS differences easier to see visually.
     sts_for_plot = np.where(np.isfinite(sts_matrix), sts_matrix, np.nan)
     # Avoid taking log of zeros or negatives.
     with np.errstate(invalid="ignore"):

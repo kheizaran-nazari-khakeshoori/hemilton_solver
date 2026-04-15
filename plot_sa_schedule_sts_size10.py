@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-
+# The input CSV contains schedule results for several size-10 instances.
 INPUT_CSV = Path("sa_schedule_grid_size10.csv")
 PLOTS_DIR = Path("plots")
 

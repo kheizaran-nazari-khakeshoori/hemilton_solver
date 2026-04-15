@@ -108,6 +108,7 @@ def main() -> None:
     cbar.set_label("log10(steps-to-solution)")
 
     fig.tight_layout()
+    # Save the heatmap figure so it can be reviewed after the run.
     out_path = PLOTS_DIR / "sa_schedule_sts_heatmap_size10.png"
     fig.savefig(out_path, dpi=150)
     plt.close(fig)

@@ -14,7 +14,9 @@ This script implements the experiment described in Andrea's email:
 - For each configuration, record:
     * average best cost reached,
     * average final cost,
-    * probability of solving (reaching the exact ground state).
+    * average relative quality `Ps` of the best solution,
+    * probability of solving (reaching the exact ground state),
+    * probability of reaching a solution within 1% or 10% of optimal.
 
 Results are written to a CSV file which can be visualised as 2D
 heatmaps (x-axis = N_steps, y-axis = beta_final, colour = metric).
@@ -113,7 +115,10 @@ def run_grid_search() -> None:
             "steps",
             "avg_best_cost",
             "avg_final_cost",
+            "avg_ps",
             "prob_solved",
+            "prob_ps_le_0.01",
+            "prob_ps_le_0.1",
         ]
         writer = csv.DictWriter(f_out, fieldnames=fieldnames)
         writer.writeheader()
@@ -152,7 +157,10 @@ def run_grid_search() -> None:
 
                     best_sum = 0.0
                     final_sum = 0.0
+                    ps_sum = 0.0
                     solved_count = 0
+                    within_1pct_count = 0
+                    within_10pct_count = 0
 
                     for run in range(RUNS_PER_CONFIG):
                         # Random initial permutation for each trial.
@@ -184,9 +192,23 @@ def run_grid_search() -> None:
                         if best_cost <= ground_cost + 1e-9:
                             solved_count += 1
 
+                        if ground_cost > 0:
+                            ps = (best_cost - ground_cost) / ground_cost
+                        else:
+                            ps = best_cost - ground_cost
+
+                        ps_sum += ps
+                        if ps <= 0.01:
+                            within_1pct_count += 1
+                        if ps <= 0.1:
+                            within_10pct_count += 1
+
                     avg_best = best_sum / float(RUNS_PER_CONFIG)
                     avg_final = final_sum / float(RUNS_PER_CONFIG)
+                    avg_ps = ps_sum / float(RUNS_PER_CONFIG)
                     prob_solved = solved_count / float(RUNS_PER_CONFIG)
+                    prob_ps_le_0_01 = within_1pct_count / float(RUNS_PER_CONFIG)
+                    prob_ps_le_0_1 = within_10pct_count / float(RUNS_PER_CONFIG)
 
                     writer.writerow(
                         {
@@ -198,7 +220,10 @@ def run_grid_search() -> None:
                             "steps": int(steps),
                             "avg_best_cost": float(avg_best),
                             "avg_final_cost": float(avg_final),
+                            "avg_ps": float(avg_ps),
                             "prob_solved": float(prob_solved),
+                            "prob_ps_le_0.01": float(prob_ps_le_0_01),
+                            "prob_ps_le_0.1": float(prob_ps_le_0_1),
                         }
                     )
 

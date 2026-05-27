@@ -11,7 +11,13 @@ STS is defined as:
     STS = N_steps * ln(1 - 0.99) / ln(1 - p),
 
 where N_steps is the number of Metropolis swaps per run and p is the
-probability of solving (reaching the ground state) for that schedule.
+probability of success for that schedule.
+
+This script computes STS for three success definitions:
+- exact solution probability (`prob_solved`)
+- probability of reaching within 1% of optimal (`prob_ps_le_0.01`)
+- probability of reaching within 10% of optimal (`prob_ps_le_0.1`)
+
 Lower STS values correspond to more efficient schedules in terms of
 steps required to reach a given confidence level.
 """
@@ -31,29 +37,7 @@ PLOTS_DIR = Path("plots")
 TARGET_CONFIDENCE = 0.99
 
 
-def main() -> None:
-    if not INPUT_CSV.is_file():
-        raise SystemExit(
-            f"Input CSV '{INPUT_CSV}' not found. Run sa_schedule_grid_search_size10.py first."
-        )
-
-    df = pd.read_csv(INPUT_CSV)
-
-    # We average solving probability over the three size-10 instances in the grid.
-    required_cols = {"beta_final", "steps", "prob_solved"}
-    if not required_cols.issubset(df.columns):
-        raise SystemExit(
-            f"CSV must contain columns {sorted(required_cols)}. "
-            "Did the grid search script run correctly?"
-        )
-
-    # Average probability of solving over instances for each (beta_final, steps).
-    grouped = (
-        df.groupby(["beta_final", "steps"], as_index=False)["prob_solved"]
-        .mean()
-        .rename(columns={"prob_solved": "mean_prob_solved"})
-    )
-
+def _compute_sts_matrix(grouped: pd.DataFrame, p_column: str) -> np.ndarray:
     beta_vals = np.sort(grouped["beta_final"].unique())
     step_vals = np.sort(grouped["steps"].unique())
 
@@ -61,18 +45,14 @@ def main() -> None:
     step_to_idx = {s: j for j, s in enumerate(step_vals)}
 
     sts_matrix = np.full((len(beta_vals), len(step_vals)), np.nan, dtype=float)
-
     log_one_minus_conf = np.log(1.0 - TARGET_CONFIDENCE)
 
     for _, row in grouped.iterrows():
         beta = float(row["beta_final"])
         steps = int(row["steps"])
-        p = float(row["mean_prob_solved"])
+        p = float(row[p_column])
 
         if p <= 0.0 or p >= 1.0:
-            # STS is undefined if p <= 0 (never solves) or formally
-            # equals N_steps if p == 1 (always solves). We treat
-            # these edge cases as NaN in the heatmap.
             sts = np.nan
         else:
             sts = steps * log_one_minus_conf / np.log(1.0 - p)
@@ -81,14 +61,13 @@ def main() -> None:
         sj = step_to_idx[steps]
         sts_matrix[bi, sj] = sts
 
-    PLOTS_DIR.mkdir(exist_ok=True)
+    return beta_vals, step_vals, sts_matrix
 
+
+def _plot_log_heatmap(matrix: np.ndarray, step_vals: np.ndarray, beta_vals: np.ndarray, title: str, out_filename: str) -> None:
     fig, ax = plt.subplots(figsize=(6, 5))
 
-    # Use a log scale for STS to improve contrast, ignoring NaNs.
-    # Log scale makes large STS differences easier to see visually.
-    sts_for_plot = np.where(np.isfinite(sts_matrix), sts_matrix, np.nan)
-    # Avoid taking log of zeros or negatives.
+    sts_for_plot = np.where(np.isfinite(matrix), matrix, np.nan)
     with np.errstate(invalid="ignore"):
         log_sts = np.log10(sts_for_plot)
 
@@ -102,18 +81,71 @@ def main() -> None:
 
     ax.set_xlabel("Number of swaps N")
     ax.set_ylabel("Final inverse temperature beta")
-    ax.set_title("log10(STS) for size-10 SA schedules (99% confidence)")
+    ax.set_title(title)
 
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label("log10(steps-to-solution)")
 
     fig.tight_layout()
-    # Save the heatmap figure so it can be reviewed after the run.
-    out_path = PLOTS_DIR / "sa_schedule_sts_heatmap_size10.png"
+    PLOTS_DIR.mkdir(exist_ok=True)
+    out_path = PLOTS_DIR / out_filename
     fig.savefig(out_path, dpi=150)
     plt.close(fig)
 
-    print(f"Saved STS heatmap to '{out_path}'")
+
+def main() -> None:
+    if not INPUT_CSV.is_file():
+        raise SystemExit(
+            f"Input CSV '{INPUT_CSV}' not found. Run sa_schedule_grid_search_size10.py first."
+        )
+
+    df = pd.read_csv(INPUT_CSV)
+
+    # We average success probability over the three size-10 instances in the grid.
+    required_cols = {
+        "beta_final",
+        "steps",
+        "prob_solved",
+        "prob_ps_le_0.01",
+        "prob_ps_le_0.1",
+    }
+    if not required_cols.issubset(df.columns):
+        raise SystemExit(
+            f"CSV must contain columns {sorted(required_cols)}. "
+            "Did the grid search script run correctly?"
+        )
+
+    grouped = df.groupby(["beta_final", "steps"], as_index=False).mean()
+
+    beta_vals, step_vals, sts_exact = _compute_sts_matrix(grouped, "prob_solved")
+    _, _, sts_ps01 = _compute_sts_matrix(grouped, "prob_ps_le_0.01")
+    _, _, sts_ps10 = _compute_sts_matrix(grouped, "prob_ps_le_0.1")
+
+    _plot_log_heatmap(
+        sts_exact,
+        step_vals,
+        beta_vals,
+        "log10(STS) for exact success (size-10 SA schedules, 99% confidence)",
+        "sa_schedule_sts_exact_heatmap_size10.png",
+    )
+
+    _plot_log_heatmap(
+        sts_ps01,
+        step_vals,
+        beta_vals,
+        "log10(STS) for Ps <= 0.01 (size-10 SA schedules, 99% confidence)",
+        "sa_schedule_sts_ps01_heatmap_size10.png",
+    )
+
+    _plot_log_heatmap(
+        sts_ps10,
+        step_vals,
+        beta_vals,
+        "log10(STS) for Ps <= 0.1 (size-10 SA schedules, 99% confidence)",
+        "sa_schedule_sts_ps10_heatmap_size10.png",
+    )
+
+    print(f"Saved STS heatmaps to '{PLOTS_DIR}' directory.")
 
 
 if __name__ == "__main__":

@@ -9,6 +9,8 @@ simple diagnostic plots:
 
 These are mainly for visualization; the key summary number remains the
 overall average probability of solving printed by the evaluation script.
+The plots are intended to show how much variation there is across
+instances when using the same schedule.
 """
 
 from __future__ import annotations
